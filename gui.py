@@ -1,66 +1,64 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, StackingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix
 import joblib
 import tempfile
-import os
+import numpy as np
 
-st.set_page_config(page_title="Congen-AI Trainer", layout="centered")
+st.set_page_config(page_title="Congen‑AI Trainer", layout="centered")
+st.title("🧠 Congen‑AI – CSV Ensemble Trainer")
 
-st.title("🧠 Congen-AI: Train on Your CSV")
-st.write("Upload your dataset and train Bagging & Stacking models directly.")
-
-uploaded_file = st.file_uploader("📁 Upload CSV File", type=["csv"])
-
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.write("Preview of your data:")
+uploaded = st.file_uploader("📂 Upload CSV", type="csv")
+if uploaded:
+    df = pd.read_csv(uploaded)
+    st.subheader("Preview")
     st.dataframe(df.head())
 
-    target_column = st.selectbox("🎯 Select Target Column", df.columns)
+    target = st.selectbox("🎯 Target column", df.columns)
+    if st.button("🚀 Train"):
+        with st.spinner("Training…"):
+            X = df.drop(columns=[target])
+            y = df[target]
+            X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.3, random_state=42)
 
-    if st.button("🚀 Train Models"):
-        with st.spinner("Training models..."):
-            try:
-                # Feature/Label split
-                X = df.drop(columns=[target_column])
-                y = df[target_column]
+            rf = RandomForestClassifier(n_estimators=100, random_state=42)
+            knn = KNeighborsClassifier(n_neighbors=5)
 
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+            bag = BaggingClassifier(base_estimator=RandomForestClassifier(),
+                                    n_estimators=10, random_state=42)
+            bag.fit(X_tr, y_tr)
+            bag_acc = accuracy_score(y_te, bag.predict(X_te))
 
-                rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-                knn_model = KNeighborsClassifier(n_neighbors=5)
+            stack = StackingClassifier(
+                estimators=[('rf', rf), ('knn', knn)],
+                final_estimator=LogisticRegression(),
+                cv=5
+            )
+            stack.fit(X_tr, y_tr)
+            stack_pred = stack.predict(X_te)
+            stack_acc = accuracy_score(y_te, stack_pred)
 
-                # Bagging
-                bagging_model = BaggingClassifier(
-                    base_estimator=RandomForestClassifier(),
-                    n_estimators=10,
-                    random_state=42
-                )
-                bagging_model.fit(X_train, y_train)
-                bag_acc = accuracy_score(y_test, bagging_model.predict(X_test))
+            # Confusion‑matrix plot
+            cm = confusion_matrix(y_te, stack_pred)
+            fig, ax = plt.subplots()
+            ax.set_title("Confusion Matrix (Stacking)")
+            im = ax.imshow(cm)
+            ax.set_xlabel("Predicted")
+            ax.set_ylabel("True")
+            for i in range(cm.shape[0]):
+                for j in range(cm.shape[1]):
+                    ax.text(j, i, cm[i, j], ha="center", va="center")
+            st.pyplot(fig)
 
-                # Stacking
-                estimators = [('rf', rf_model), ('knn', knn_model)]
-                stacking_model = StackingClassifier(
-                    estimators=estimators,
-                    final_estimator=LogisticRegression(),
-                    cv=5
-                )
-                stacking_model.fit(X_train, y_train)
-                stack_acc = accuracy_score(y_test, stacking_model.predict(X_test))
+            st.success(f"Bagging accuracy  : {bag_acc*100:.2f}%")
+            st.success(f"Stacking accuracy : {stack_acc*100:.2f}%")
 
-                # Save stacking model to temp file
-                temp_model = tempfile.NamedTemporaryFile(delete=False, suffix=".pkl")
-                joblib.dump(stacking_model, temp_model.name)
-
-                st.success(f"✅ Bagging Accuracy: {bag_acc * 100:.2f}%")
-                st.success(f"✅ Stacking Accuracy: {stack_acc * 100:.2f}%")
-                st.download_button("📥 Download Trained Model", open(temp_model.name, "rb"), file_name="stack_model.pkl")
-
-            except Exception as e:
-                st.error(f"❌ Error: {e}")
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pkl")
+            joblib.dump(stack, tmp.name)
+            st.download_button("📥 Download model", open(tmp.name, "rb"),
+                               file_name="stack_model.pkl")
