@@ -9,9 +9,17 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 import joblib
 import tempfile
 import numpy as np
+import os
 
-st.set_page_config(page_title="Congen‑AI Trainer", layout="centered")
-st.title("🧠 Congen‑AI – CSV Ensemble Trainer")
+preset = st.selectbox("📦 Or load a sample dataset", ["None", "Iris", "Titanic"])
+if preset != "None":
+    file_path = f"samples/{preset.lower()}.csv"
+    df = pd.read_csv(file_path)
+    st.session_state["sample_df"] = df
+    st.write("Using sample dataset:")
+    st.dataframe(df.head())
+    st.set_page_config(page_title="Congen‑AI Trainer", layout="centered")
+    st.title("🧠 Congen‑AI – CSV Ensemble Trainer")
 
 uploaded = st.file_uploader("📂 Upload CSV", type="csv")
 if uploaded:
