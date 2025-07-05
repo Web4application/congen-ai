@@ -1,0 +1,10 @@
+site_name: Congen-AI Docs
+nav:
+  - Introduction: docs/intro.md
+  - Usage: docs/usage.md
+  - API: docs/api.md
+  - Deploy: docs/deploy.md
+theme:
+  name: material
+  features:
+    - navigation.expand
