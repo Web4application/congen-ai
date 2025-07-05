@@ -1,3 +1,4 @@
+
 site_name: Congen-AI Docs
 nav:
   - Introduction: docs/intro.md
@@ -6,5 +7,3 @@ nav:
   - Deploy: docs/deploy.md
 theme:
   name: material
-  features:
-    - navigation.expand

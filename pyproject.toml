@@ -1,0 +1,23 @@
+
+[project]
+name = "congen-ai"
+version = "0.1.0"
+description = "Train and compare ensemble AI models via CLI or GUI."
+authors = [{ name = "Web4application", email = "you@example.com" }]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "pandas",
+    "scikit-learn",
+    "joblib",
+    "matplotlib",
+    "streamlit"
+]
+
+[project.scripts]
+congen-train = "congen_ai.ai_main_csv:train_from_csv"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

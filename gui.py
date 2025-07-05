@@ -1,29 +1,32 @@
+
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier, StackingClassifier
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 import joblib
 import tempfile
-import numpy as np
 import os
 
-preset = st.selectbox("📦 Or load a sample dataset", ["None", "Iris", "Titanic"])
-if preset != "None":
-    file_path = f"samples/{preset.lower()}.csv"
-    df = pd.read_csv(file_path)
-    st.session_state["sample_df"] = df
-    st.write("Using sample dataset:")
-    st.dataframe(df.head())
-    st.set_page_config(page_title="Congen‑AI Trainer", layout="centered")
-    st.title("🧠 Congen‑AI – CSV Ensemble Trainer")
+st.set_page_config(page_title="Congen‑AI Trainer", layout="centered")
 
-uploaded = st.file_uploader("📂 Upload CSV", type="csv")
-if uploaded:
-    df = pd.read_csv(uploaded)
+st.title("🧠 Congen‑AI – CSV Ensemble Trainer")
+
+# Sample dataset selector
+preset = st.selectbox("📦 Load sample dataset", ["None", "Iris"])
+if preset != "None":
+    df = pd.read_csv(f"samples/{preset.lower()}.csv")
+else:
+    uploaded = st.file_uploader("📂 Upload CSV", type="csv")
+    if uploaded:
+        df = pd.read_csv(uploaded)
+    else:
+        df = None
+
+if df is not None:
     st.subheader("Preview")
     st.dataframe(df.head())
 
@@ -45,17 +48,14 @@ if uploaded:
             stack = StackingClassifier(
                 estimators=[('rf', rf), ('knn', knn)],
                 final_estimator=LogisticRegression(),
-                cv=5
-            )
-            stack.fit(X_tr, y_tr)
+                cv=5).fit(X_tr, y_tr)
             stack_pred = stack.predict(X_te)
             stack_acc = accuracy_score(y_te, stack_pred)
 
-            # Confusion‑matrix plot
             cm = confusion_matrix(y_te, stack_pred)
             fig, ax = plt.subplots()
+            ax.imshow(cm)
             ax.set_title("Confusion Matrix (Stacking)")
-            im = ax.imshow(cm)
             ax.set_xlabel("Predicted")
             ax.set_ylabel("True")
             for i in range(cm.shape[0]):
@@ -70,3 +70,5 @@ if uploaded:
             joblib.dump(stack, tmp.name)
             st.download_button("📥 Download model", open(tmp.name, "rb"),
                                file_name="stack_model.pkl")
+else:
+    st.info("Upload a CSV or choose a sample to begin.")
